@@ -1,0 +1,33 @@
+Configuring and compiling the GNU C Tools
+=========================================
+
+It is not recommentd to compile in the source directory.  To install
+just follow the usual:
+
+  $ /path/to/source/configure
+  $ make
+  $ make install
+
+The configure provides the usual options to configure the build:
+
+'--prefix=DIRECTORY'
+     Install machine-independent data files in subdirectories of
+     'DIRECTORY'.  The default is to install in '/usr/local'.
+
+'--exec-prefix=DIRECTORY'
+     Install the library and other machine-dependent files in
+     subdirectories of 'DIRECTORY'.  The default is to the '--prefix'
+     directory if that option is specified, or '/usr/local' otherwise.
+
+'--build=BUILD-SYSTEM'
+'--host=HOST-SYSTEM'
+     These options are for cross-compiling.  If you specify both options
+     and BUILD-SYSTEM is different from HOST-SYSTEM, 'configure' will
+     prepare to cross-compile from BUILD-SYSTEM to be used on HOST-SYSTEM.
+
+Build Prerequisites
+===================
+
+   * GNU 'make' 4.0 or newer
+
+   * GCC 6.2 or newer

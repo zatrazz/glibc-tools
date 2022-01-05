@@ -1,0 +1,6 @@
+GLIBC Tools
+
+This projects contains tools and library provided by glibc that either
+have been deprectated of moved out from the project.
+
+For basic installation instructions, see the included INSTALL file.

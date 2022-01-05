@@ -1,0 +1,242 @@
+#!/bin/sh
+# Copyright (C) 2022 Free Software Foundation, Inc.
+
+# The GNU C Library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+
+# The GNU C Library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+
+# You should have received a copy of the GNU Lesser General Public
+# License along with the GNU C Library; if not, see
+# <https://www.gnu.org/licenses/>.
+
+version=0.1
+report_bugs=zatrazz@gmail.com
+
+usage () {
+cat <<EOF
+Usage: $0 [OPTION]... [VAR=VALUE]... [TARGET]
+
+Defaults for the options are specified in brackets.
+
+Configuration:
+  --srcdir=DIR            source directory [detected]
+  --prefix=PREFIX         main installation prefix [/usr]
+  --exec-prefix=EPREFIX   installation prefix for executable files [PREFIX]
+  --bindir=DIR            user executables [EPREFIX/bin]
+  --libdir=DIR            library [PREFIX/lib]
+
+System types:
+  --target=TARGET         configure to run on target TARGET [detected]
+  --host=HOST             same as --target
+  --build=BUILD           build system type; used only to infer cross-compiling
+
+Some influential environment variables:
+  CC                      C compiler command [detected]
+  CFLAGS                  C compiler flags [-Os -pipe ...]
+  CROSS_COMPILE           prefix for cross compiler and tools [none]
+
+Use these variables to override the choices made by configure.
+
+EOF
+exit 0
+}
+
+echo () {
+  printf "%s\n" "$*"
+}
+fail () {
+  echo "$*" ; exit 1
+}
+fnmatch () {
+  eval "case \"\$2\" in $1) return 0 ;; *) return 1 ;; esac"
+}
+cmdexists () {
+  type "$1" >/dev/null 2>&1 ;
+}
+trycc () {
+  test -z "$CC" && cmdexists "$1" && CC=$1
+}
+
+stripdir () {
+  while eval "fnmatch '*/' \"\${$1}\""
+  do
+    eval "$1=\${$1%/}"
+  done
+}
+
+trycppif () {
+  printf "checking preprocessor condition %s... " "$1"
+  echo "int foo () { return 0; };" > "$tmpc"
+  echo "#if $1" >> "$tmpc"
+  echo "#error yes" >> "$tmpc"
+  echo "#endif" >> "$tmpc"
+  if $CC $2 -c -o /dev/null "$tmpc" >/dev/null 2>&1 ; then
+    echo "false"
+    return 1
+  else
+    echo "true"
+    return 0
+  fi
+}
+
+
+srcdir=
+prefix=/usr
+exec_prefix='$(prefix)'
+bindir='$(exec_prefix)/bin'
+libdir='$(prefix)/lib'
+includedir='$(prefix)/include'
+syslibdir='/lib'
+tools=
+tool_libs=
+build=
+target=
+
+for arg ; do
+  case "$arg" in
+    --help|-h) usage ;;
+    --srcdir=*) srcdir=${arg#*=} ;;
+    --prefix=*) prefix=${arg#*=} ;;
+    --exec-prefix=*) exec_prefix=${arg#*=} ;;
+    --bindir=*) bindir=${arg#*=} ;;
+    --libdir=*) libdir=${arg#*=} ;;
+    --host=*|--target=*) target=${arg#*=} ;;
+    --build=*) build=${arg#*=} ;;
+    -* ) echo "$0: unknown option $arg" ;;
+    AR=*) AR=${arg#*=} ;;
+    RANLIB=*) RANLIB=${arg#*=} ;;
+    CC=*) CC=${arg#*=} ;;
+    CFLAGS=*) CFLAGS=${arg#*=} ;;
+    CPPFLAGS=*) CPPFLAGS=${arg#*=} ;;
+    LDFLAGS=*) LDFLAGS=${arg#*=} ;;
+    CROSS_COMPILE=*) CROSS_COMPILE=${arg#*=} ;;
+    *=*) ;;
+    *) build=$arg ; target=$arg ;;
+  esac
+done
+
+for i in srcdir prefix exec_prefix bindir libdir ; do
+  stripdir $i
+done
+
+# Get the source dir for out-of-tree builds
+if test -z "$srcdir" ; then
+  srcdir="${0%/configure}"
+  stripdir srcdir
+fi
+abs_builddir="$(pwd)" || fail "$0: cannot determine working directory"
+abs_srcdir="$(cd $srcdir && pwd)" || fail "$0: invalid source directory $srcdir"
+test "$abs_srcdir" = "$abs_builddir" && srcdir=.
+test "$srcdir" != "." && test -f Makefile && test ! -h Makefile && fail "$0: Makefile already exists in the working directory"
+
+# Get a temp filename we can use
+i=0
+set -C
+while : ; do i=$(($i+1))
+  tmpc="./conf$$-$PPID-$i.c"
+  2>|/dev/null > "$tmpc" && break
+  test "$i" -gt 50 && fail "$0: cannot create temporary file $tmpc"
+done
+set +C
+trap 'rm "$tmpc"' EXIT INT QUIT TERM HUP
+
+# Check whether we are cross-compiling, and set a default
+# CROSS_COMPILE prefix if none was provided.
+test "$target" && \
+test "$target" != "$build" && \
+test -z "$CROSS_COMPILE" && \
+CROSS_COMPILE="$target-"
+
+# Find a C compiler to use
+printf "checking for C compiler... "
+trycc ${CROSS_COMPILE}gcc
+trycc ${CROSS_COMPILE}c99
+trycc ${CROSS_COMPILE}cc
+printf "%s\n" "$CC"
+test -n "$CC" || { echo "$0: cannot find a C compiler" ; exit 1 ; }
+
+printf "checking whether C compiler works... "
+echo "typedef int x;" > "$tmpc"
+if output=$($CC $CPPFLAGS $CFLAGS -c -o /dev/null "$tmpc" 2>&1) ; then
+  printf "yes\n"
+else
+  printf "no; compiler output follows:\n%s\n" "$output"
+  exit 1
+fi
+
+# Find the target architecture
+printf "checking target system type... "
+test -n "$target" || target=$($CC -dumpmachine 2>/dev/null) || target=unknown
+printf "%s\n" "$target"
+
+case "$target" in
+aarch64*) ARCH=aarch64 ;;
+alpha*) ARCH=alpha ;;
+arm*) ARCH=arm ;;
+arc*) ARCH=arc ;;
+csky*) ARCH=csky ;;
+i?86*) ARCH=i386 ;;
+hppa*) ARCH=hppa ;;
+ia64*) ARCH=ia64 ;;
+m68k*) ARCH=m68k ;;
+mips*) ARCH=mips ;;
+microblaze*) ARCH=microblaze ;;
+powerpc*|ppc*) ARCH=powerpc ;;
+riscv*) ARCH=riscv ;;
+nios2*) ARCH=nios2 ;;
+sparc*) ARCH=sparc ;;
+sh[1-9bel-]*|sh|superh*) ARCH=sh ;;
+s390*) ARCH=s390 ;;
+x86_64*) ARCH=x86_64 ;;
+unknown) fail "$0: unable to detect target arch; try $0 --target=..." ;;
+*) fail "$0: unknown or unsupported target \"$target\"" ;;
+esac
+
+if test "$ARCH" = "sparc"; then
+  if trycppif __arch64__ "$CFLAGS" ; then
+    SUBARCH=sparc64
+  else
+    SUBARCH=sparc32
+  fi
+elif test "$ARCH" = "s390"; then
+  if trycppif __s390x__ "$CFLAGS" ; then
+    SUBARCH=s390-64
+  else
+    SUBARCH=s390-32
+  fi
+fi
+
+printf "creating config.mk... "
+exec 3>&1 1>config.mk
+
+cat << EOF
+# This version of config.mk was generated by:
+# $cmdline
+# Any changes made here will be lost if configure is re-run
+AR = ${AR:-\$(CROSS_COMPILE)ar}
+RANLIB = ${RANLIB:-\$(CROSS_COMPILE)ranlib}
+ARCH = $ARCH
+SUBARCH = $SUBARCH
+INSTALL = install
+CFLAGS = $CFLAGS
+CROSS_COMPILE = $CROSS_COMPILE
+CC = $CC
+srcdir = $srcdir
+prefix = $prefix
+exec_prefix = $exec_prefix
+bindir = $bindir
+libdir = $libdir
+version = $version
+report_bugs = $report_bugs
+EOF
+exec 1>&3 3>&-
+
+test "$srcdir" = "." || ln -sf $srcdir/Makefile .
+
+printf "done\n"
