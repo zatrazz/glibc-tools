@@ -191,6 +191,7 @@ powerpc*|ppc*) ARCH=powerpc ;;
 riscv*) ARCH=riscv ;;
 nios2*) ARCH=nios2 ;;
 sparc*) ARCH=sparc ;;
+or1k*) ARCH=or1k ;;
 sh[1-9bel-]*|sh|superh*) ARCH=sh ;;
 s390*) ARCH=s390 ;;
 x86_64*) ARCH=x86_64 ;;

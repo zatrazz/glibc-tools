@@ -33,6 +33,7 @@ mips64
 nios2
 powerpc64le
 powerpc
+or1k
 riscv32
 riscv64
 s390
@@ -66,6 +67,8 @@ for arch in $ARCHS; do
 	   cflags="-m31"
 	   suffix=gnu
 	   arch=s390x ;;
+  or1k)    target=or1k-linux-gnu-soft
+	   suffix=gnu ;;
   sh)      target=sh4-linux-gnu
 	   suffix=gnu
            arch=sh4 ;;
