@@ -99,4 +99,10 @@ for arch in $ARCHS; do
     echo "FAIL: make: $origarch"
     exit 1
   fi
+
+  make check 2>&1 > check.log
+  if [ $? -ne 0 ]; then
+    echo "FAIL: check: $origarch"
+    exit 1
+  fi
 done

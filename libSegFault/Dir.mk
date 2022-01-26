@@ -58,5 +58,7 @@ install-libSegFault: \
  $(libSegFault-libs:build/lib/%=$(DESTDIR)$(libdir)/%) \
  $(libSegFault-tools:build/bin/%=$(DESTDIR)$(bindir)/%) \
 
+check-libSegFault:
+
 clean-libSegFault:
 	rm -f $(libSegFault-files)
