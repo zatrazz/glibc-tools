@@ -44,6 +44,9 @@ all-libSegFault: $(libSegFault-libs) $(libSegFault-tools) $(libSegFault-includes
 $(libSegFault-objs): $(libSegFault-includes)
 $(libSegFault-objs): CFLAGS_ALL += $(libSegFault-cflags)
 
+# libSegFault.so installs a signal handler in its ELF constructor.
+LDFLAGS += -Wl,--enable-new-dtags,-z,nodelete
+
 build/lib/libSegFault.so: $(libSegFault-lib-objs:%.o=%.os)
 	$(CC) $(CFLAGS_ALL) $(LDFLAGS) -shared -o $@ $^
 
